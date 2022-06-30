@@ -1,5 +1,7 @@
+import 'package:example/bloc/carousel_bloc.dart';
 import 'package:expandable_page_view/expandable_page_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 void main() {
   runApp(MyApp());
@@ -14,7 +16,10 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: BlocProvider(
+        create: (context) => CarouselBloc(),
+        child: MyHomePage(title: 'Flutter Demo Home Page'),
+      ),
     );
   }
 }
@@ -38,49 +43,103 @@ class _MyHomePageState extends State<MyHomePage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            ExpandablePageView(
-              children: [
-                ExamplePage(Colors.blue, "1", 100),
-                ExamplePage(Colors.green, "2", 200),
-                ExamplePage(Colors.red, "3", 300),
-              ],
-            ),
-            ExpandablePageView.builder(
-              animateFirstPage: true,
-              estimatedPageSize: 100,
-              itemCount: 3,
-              itemBuilder: (context, index) {
-                return ExamplePage(
-                  Colors.blue,
-                  index.toString(),
-                  (index + 1) * 100.0,
+            BlocBuilder<CarouselBloc, CarouselState>(
+              builder: (context, state) {
+                final exampleWidgets = _createExampleWidgets(state);
+
+                if (exampleWidgets.isEmpty) {
+                  return Container();
+                }
+
+                return ExpandablePageView(
+                  children: exampleWidgets,
                 );
               },
             ),
-            const SizedBox(height: 20),
-            Text("UNDER PAGE VIEW WIDGET"),
           ],
         ),
       ),
     );
   }
+
+  List<Widget> _createExampleWidgets(CarouselState state) {
+    List<Widget> exampleWidgets = [];
+
+    if (state.showFirstCard) {
+      exampleWidgets.add(ExampleWidget(Colors.lightBlue, 0, 300));
+    }
+
+    if (state.showSecondCard) {
+      exampleWidgets.add(ExampleWidget(Colors.lightGreen, 1, 500));
+    }
+
+    if (state.showThirdCard) {
+      exampleWidgets.add(ExampleWidget(Colors.redAccent, 2, 700));
+    }
+
+    return exampleWidgets;
+  }
 }
 
-class ExamplePage extends StatelessWidget {
+class ExampleWidget extends StatefulWidget {
   final Color color;
-  final String text;
+  final int index;
   final double height;
 
-  const ExamplePage(this.color, this.text, this.height);
+  const ExampleWidget(this.color, this.index, this.height);
 
+  @override
+  State<ExampleWidget> createState() => _ExampleWidgetState();
+}
+
+class _ExampleWidgetState extends State<ExampleWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: height,
-      color: color,
-      child: Center(
-        child: Text(text),
+      height: widget.height,
+      color: widget.color,
+      child: Column(
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Center(
+            child: Text(
+              'Card #${widget.index + 1}',
+              style: Theme.of(context).textTheme.headline5,
+            ),
+          ),
+          SizedBox(
+            height: 20,
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.white,
+              padding: const EdgeInsets.all(16.0),
+              primary: Colors.black,
+              textStyle: const TextStyle(fontSize: 20),
+            ),
+            onPressed: () => _removeCarouselItem(widget.index),
+            child: const Text('Remove me'),
+          ),
+        ],
       ),
     );
+  }
+
+  void _removeCarouselItem(int index) {
+    switch (index) {
+      case 0:
+        BlocProvider.of<CarouselBloc>(context)
+            .add(CarouselFirstCardDismissed());
+        break;
+      case 1:
+        BlocProvider.of<CarouselBloc>(context)
+            .add(CarouselSecondCardDismissed());
+        break;
+      case 2:
+        BlocProvider.of<CarouselBloc>(context)
+            .add(CarouselThirdCardDismissed());
+        break;
+    }
   }
 }
